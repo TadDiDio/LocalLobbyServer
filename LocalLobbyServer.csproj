@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Build to a DLL -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Reference Unity Shared code -->
+  <ItemGroup>
+    <Compile Include="C:\Users\tadad\Documents\Unity Projects\Lobby Service\Assets\com.radtad2.lobbyservice.localserver\Runtime\Shared\**\*.cs" />
+  </ItemGroup>
+
+
+  <!-- Reference Newtonsoft Json lib -->
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
