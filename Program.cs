@@ -1,18 +1,39 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LobbyService.LocalServer
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             Console.WriteLine($"Starting local lobby server on port {ServerDetails.Port}");
 
-            CommandTypeRegistry.RegisterCommandTypes();
+            MessageTypeRegistry.RegisterMessageTypes();
 
             var server = new Server(ServerDetails.Port);
-            server.RunAsync(CancellationToken.None).Wait();
+
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                Console.WriteLine("Shutting down...");
+                cts.Cancel();
+            };
+
+            try
+            {
+                await server.RunAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                /* Expected on Ctrl+C */
+            }
+            finally
+            {
+                server.Dispose();
+            }
         }
     }
 }
