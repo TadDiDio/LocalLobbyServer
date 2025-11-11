@@ -14,6 +14,7 @@ public static class CommandRegistry
             [typeof(ConnectRequest)] = typeof(ConnectCommand),
             [typeof(CreateLobbyRequest)] = typeof(CreateCommand),
             // [typeof(JoinLobbyRequest)] = typeof(JoinCommand),
+            [typeof(LeaveLobbyRequest)] = typeof(LeaveCommand)
         };
     }
 

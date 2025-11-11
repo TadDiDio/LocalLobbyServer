@@ -61,6 +61,24 @@ public class LocalLobbyServer : IDisposable
         _writers[targetId].Send(message);
     }
 
+    public void Broadcast(Message message)
+    {
+        foreach (var writer in _writers.Values)
+        {
+            writer.Send(message);
+        }
+    }
+
+    public void BroadcastExcept(Guid excludeId, Message message)
+    {
+        foreach (var kvp in _writers)
+        {
+            if (kvp.Key == excludeId) continue;
+            
+            kvp.Value.Send(message);
+        }
+    }
+
     private void HandleTcpConnect(TcpClient client)
     {
         if (client == null) return;
@@ -104,11 +122,6 @@ public class LocalLobbyServer : IDisposable
         OnClientDisconnect?.Invoke(clientId);
     }
 
-    public void Dispose()
-    {
-        foreach (var clientId in _clients.Keys) RemoveTcpClient(clientId);
-    }
-
     private void RemoveTcpClient(Guid id)
     {
         if (_writers.ContainsKey(id))
@@ -139,5 +152,10 @@ public class LocalLobbyServer : IDisposable
         _clients.Remove(id);
         client?.Close();
         client?.Dispose();
+    }
+    
+    public void Dispose()
+    {
+        foreach (var clientId in _clients.Keys) RemoveTcpClient(clientId);
     }
 }

@@ -16,7 +16,7 @@ public class Server : IDisposable
     {
         _port = port;
         _lobbyServer = new();
-        _lobbyManager = new();
+        _lobbyManager = new(_lobbyServer);
         _clients = [];
     }
 

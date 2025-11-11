@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LobbyService.LocalServer;
 
 public class LobbyManager
 {
-    public readonly List<LocalLobbyMember> Members = [];
+    public readonly List<LocalLobbyMember> ConnectedMembers = [];
     public readonly Dictionary<LocalLobbyMember, Guid> MemberToLobby = [];
     public readonly Dictionary<Guid, Lobby> Lobbies = [];
+    
+    private LocalLobbyServer _server;
+
+    public LobbyManager(LocalLobbyServer server) => _server = server;
 
     private bool ValidId(string id, out Guid guid)
     {
@@ -16,25 +21,24 @@ public class LobbyManager
 
     public void RegisterMember(LocalLobbyMember member)
     {
-        if (Members.Contains(member))
+        if (ConnectedMembers.Contains(member))
         {
             Console.WriteLine($"Failed to register client {member} because they already existed");
             return;
         }
 
-        Members.Add(member);
-        MemberToLobby[member] = Guid.Empty;
+        ConnectedMembers.Add(member);
     }
 
     public void UnregisterMember(LocalLobbyMember member)
     {
-        Members.Remove(member);
+        ConnectedMembers.Remove(member);
 
         if (MemberToLobby.TryGetValue(member, out var lobbyId))
         {
             Lobbies[lobbyId].RemoveMember(member);
+            MemberToLobby.Remove(member);
         }
-        MemberToLobby.Remove(member);
     }
 
     public EnterResponse CreateLobby(CreateLobbyRequest request, LocalLobbyMember sender)
@@ -50,6 +54,8 @@ public class LobbyManager
         Lobbies[lobbyId] = lobby;
         MemberToLobby[sender] = lobbyId;
 
+        Console.WriteLine($"{sender} created lobby {lobbyId}");
+
         return new EnterResponse
         {
             Snapshot = lobby.GetSnapshot()
@@ -59,8 +65,18 @@ public class LobbyManager
     public void LeaveLobby(LeaveLobbyRequest request, LocalLobbyMember sender)
     {
         if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!Lobbies.TryGetValue(lobbyId, out var lobby)) return;
 
-        Lobbies[lobbyId].RemoveMember(sender);
-        MemberToLobby[sender] = Guid.Empty;
+        lobby.RemoveMember(sender);
+        MemberToLobby.Remove(sender);
+
+        _server.BroadcastExcept(sender.Id, Message.CreateEvent(new OtherMemberLeftEvent
+        {
+            Member = sender,
+            LeaveReason = 0,
+            KickReason = -1
+        }));
+
+        Console.WriteLine($"{sender} left lobby {request.LobbyId}");
     }
 }
