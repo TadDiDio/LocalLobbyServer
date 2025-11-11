@@ -6,12 +6,14 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LobbyService.LocalServer;
+
+namespace LobbyService.LocalServer;
+
 
 public class LocalLobbyServer : IDisposable
 {
-    public event Action<ClientMessage> OnClientMessage;
-    public event Action<Guid> OnClientConnect;
+    public event Action<TcpClientMessage> OnClientMessage;
+    public event Action<Guid> OnTcpClientConnect;
     public event Action<Guid> OnClientDisconnect;
 
     private TcpListener _listener;
@@ -37,7 +39,7 @@ public class LocalLobbyServer : IDisposable
             try
             {
                 var client = await _listener.AcceptTcpClientAsync().AsCancellable(token);
-                HandleConnect(client);
+                HandleTcpConnect(client);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex) { Console.WriteLine($"Accept failed: {ex.Message}"); }
@@ -59,7 +61,7 @@ public class LocalLobbyServer : IDisposable
         _writers[targetId].Send(message);
     }
 
-    private void HandleConnect(TcpClient client)
+    private void HandleTcpConnect(TcpClient client)
     {
         if (client == null) return;
 
@@ -70,7 +72,7 @@ public class LocalLobbyServer : IDisposable
             Console.WriteLine("Attempted to add a client that was already recorded");
             return;
         }
-        
+
         _clients[clientId] = client;
 
         var stream = client.GetStream();
@@ -81,33 +83,33 @@ public class LocalLobbyServer : IDisposable
         var handle = new CallbackHandle
         {
             OnMessage = msg => HandleMessage(clientId, msg),
-            OnDisconnect = () => HandleDisconnect(clientId)
+            OnDisconnect = () => HandleTcpDisconnect(clientId)
         };
 
         _handles[clientId] = handle;
         _readers[clientId].OnMessage += handle.OnMessage;
         _readers[clientId].OnDisconnected += handle.OnDisconnect;
 
-        OnClientConnect?.Invoke(clientId);
+        OnTcpClientConnect?.Invoke(clientId);
     }
 
     private void HandleMessage(Guid clientId, Message message)
     {
-        OnClientMessage?.Invoke(new ClientMessage { ClientId = clientId, Message = message });
+        OnClientMessage?.Invoke(new TcpClientMessage { ClientId = clientId, Message = message });
     }
 
-    private void HandleDisconnect(Guid clientId)
+    private void HandleTcpDisconnect(Guid clientId)
     {
-        RemoveClient(clientId);
+        RemoveTcpClient(clientId);
         OnClientDisconnect?.Invoke(clientId);
     }
 
     public void Dispose()
     {
-        foreach (var clientId in _clients.Keys) RemoveClient(clientId);
+        foreach (var clientId in _clients.Keys) RemoveTcpClient(clientId);
     }
 
-    private void RemoveClient(Guid id)
+    private void RemoveTcpClient(Guid id)
     {
         if (_writers.ContainsKey(id))
         {
@@ -133,7 +135,7 @@ public class LocalLobbyServer : IDisposable
         }
 
         var client = _clients[id];
-    
+
         _clients.Remove(id);
         client?.Close();
         client?.Dispose();

@@ -26,14 +26,8 @@ namespace LobbyService.LocalServer
             {
                 await server.RunAsync(cts.Token);
             }
-            catch (OperationCanceledException)
-            {
-                /* Expected on Ctrl+C */
-            }
-            finally
-            {
-                server.Dispose();
-            }
+            catch (OperationCanceledException) { }
+            finally { server.Dispose(); }
         }
     }
 }

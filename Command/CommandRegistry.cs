@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using LobbyService.LocalServer;
+
+namespace LobbyService.LocalServer;
 
 public static class CommandRegistry
 {
@@ -10,8 +11,9 @@ public static class CommandRegistry
     {
         _types = new Dictionary<Type, Type>
         {
+            [typeof(ConnectRequest)] = typeof(ConnectCommand),
             [typeof(CreateLobbyRequest)] = typeof(CreateCommand),
-
+            // [typeof(JoinLobbyRequest)] = typeof(JoinCommand),
         };
     }
 

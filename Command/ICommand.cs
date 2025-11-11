@@ -1,6 +1,6 @@
 using System;
-using LobbyService.LocalServer;
-using Newtonsoft.Json.Bson;
+
+namespace LobbyService.LocalServer;
 
 public interface ICommand
 {
