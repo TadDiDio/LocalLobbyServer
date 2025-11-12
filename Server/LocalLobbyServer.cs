@@ -61,21 +61,11 @@ public class LocalLobbyServer : IDisposable
         _writers[targetId].Send(message);
     }
 
-    public void Broadcast(Message message)
+    public void Broadcast(List<Guid> receivers, Message message)
     {
-        foreach (var writer in _writers.Values)
+        foreach (var receiver in receivers)
         {
-            writer.Send(message);
-        }
-    }
-
-    public void BroadcastExcept(Guid excludeId, Message message)
-    {
-        foreach (var kvp in _writers)
-        {
-            if (kvp.Key == excludeId) continue;
-            
-            kvp.Value.Send(message);
+            SendMessage(receiver, message);
         }
     }
 

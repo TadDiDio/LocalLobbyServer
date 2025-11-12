@@ -70,7 +70,7 @@ public class LobbyManager
         lobby.RemoveMember(sender);
         MemberToLobby.Remove(sender);
 
-        _server.BroadcastExcept(sender.Id, Message.CreateEvent(new OtherMemberLeftEvent
+        _server.Broadcast(lobby.GetReceiversExcept(sender.Id), Message.CreateEvent(new OtherMemberLeftEvent
         {
             Member = sender,
             LeaveReason = 0,
@@ -78,5 +78,22 @@ public class LobbyManager
         }));
 
         Console.WriteLine($"{sender} left lobby {request.LobbyId}");
+    }
+
+    public void Invite(InviteMemberRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!ValidId(request.InviteeId, out var inviteeId)) return;
+
+        var invitee = ConnectedMembers.FirstOrDefault(m => m.Id == inviteeId);
+        if (invitee == null) return;
+
+        _server.SendMessage(inviteeId, Message.CreateEvent(new ReceivedInviteEvent
+        {
+            Sender = sender,
+            LobbyId = lobbyId
+        }));
+
+        Console.WriteLine($"{sender} invited {invitee} to lobby {lobbyId}");
     }
 }

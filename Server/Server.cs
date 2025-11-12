@@ -31,14 +31,22 @@ public class Server : IDisposable
 
     private void HandleTcpClientConnected(Guid clientId)
     {
-        _clients[clientId] = new LocalLobbyMember(clientId, NameGenerator.New);
-        Console.WriteLine($"{_clients[clientId]} connected");
+        var member = new LocalLobbyMember(clientId, NameGenerator.New);
+
+        _clients[clientId] = member;
+        _lobbyManager.RegisterMember(member);
+        
+        Console.WriteLine($"{member} connected");
     }
 
     private void HandleTcpClientDisconnected(Guid clientId)
     {
-        Console.WriteLine($"{_clients[clientId]} disconnected");
+        var member = _clients[clientId];
+
+        _lobbyManager.UnregisterMember(member);
         _clients.Remove(clientId);
+
+        Console.WriteLine($"{member} disconnected");
     }
 
     private void HandleTcpClientMessage(TcpClientMessage clientMessage)

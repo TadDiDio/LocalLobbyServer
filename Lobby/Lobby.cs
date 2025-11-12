@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LobbyService.LocalServer;
 
@@ -33,6 +34,11 @@ public class Lobby
             LobbyData = Metadata,
             MemberData = MemberData,
         };
+    }
+
+    public List<Guid> GetReceiversExcept(params Guid[] exceptions)
+    {
+        return [.. Members.Select(m => m.Id).Where(id => !exceptions.Contains(Id))];
     }
 
     public Lobby(Guid lobbyId, LocalLobbyMember ownerId, int capacity)
