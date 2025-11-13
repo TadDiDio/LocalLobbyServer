@@ -12,9 +12,9 @@ namespace LobbyService.LocalServer;
 
 public class LocalLobbyServer : IDisposable
 {
-    public event Action<TcpClientMessage> OnClientMessage;
+    public event Action<TcpClientMessage> OnTcpClientMessage;
     public event Action<Guid> OnTcpClientConnect;
-    public event Action<Guid> OnClientDisconnect;
+    public event Action<Guid> OnTcpClientDisconnect;
 
     private TcpListener _listener;
     private Dictionary<Guid, TcpClient> _clients;
@@ -103,13 +103,13 @@ public class LocalLobbyServer : IDisposable
 
     private void HandleMessage(Guid clientId, Message message)
     {
-        OnClientMessage?.Invoke(new TcpClientMessage { ClientId = clientId, Message = message });
+        OnTcpClientMessage?.Invoke(new TcpClientMessage { ClientId = clientId, Message = message });
     }
 
     private void HandleTcpDisconnect(Guid clientId)
     {
         RemoveTcpClient(clientId);
-        OnClientDisconnect?.Invoke(clientId);
+        OnTcpClientDisconnect?.Invoke(clientId);
     }
 
     private void RemoveTcpClient(Guid id)

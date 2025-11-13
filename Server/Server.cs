@@ -23,8 +23,8 @@ public class Server : IDisposable
     public async Task RunAsync(CancellationToken token)
     {
         _lobbyServer.OnTcpClientConnect += HandleTcpClientConnected;
-        _lobbyServer.OnClientDisconnect += HandleTcpClientDisconnected;
-        _lobbyServer.OnClientMessage += HandleTcpClientMessage;
+        _lobbyServer.OnTcpClientDisconnect += HandleTcpClientDisconnected;
+        _lobbyServer.OnTcpClientMessage += HandleTcpClientMessage;
 
         await _lobbyServer.RunAsync(_port, token);
     }
@@ -86,6 +86,12 @@ public class Server : IDisposable
 
     public void Dispose()
     {
-        _lobbyServer?.Dispose();
+        if (_lobbyServer != null)
+        {
+            _lobbyServer.OnTcpClientConnect -= HandleTcpClientConnected;
+            _lobbyServer.OnTcpClientDisconnect -= HandleTcpClientDisconnected;
+            _lobbyServer.OnTcpClientMessage -= HandleTcpClientMessage;
+            _lobbyServer.Dispose();
+        }
     }
 }

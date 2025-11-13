@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace LobbyService.LocalServer;
 
@@ -12,15 +13,52 @@ public class Lobby
     public LocalLobbyType LobbyType { get; private set; }
     public IReadOnlyList<LocalLobbyMember> Members => _members;
     public IReadOnlyDictionary<string, string> Metadata => _metadata;
-    public IReadOnlyDictionary<LocalLobbyMember, Dictionary<string, string>> MemberData => _memberData;
-
-    public event Action<LocalLobbyMember> OnNewOwner;
-    public event Action OnClosed;
-    public event Action<LocalLobbyMember> OnMemberLeft;
+    public IReadOnlyDictionary<Guid, Dictionary<string, string>> MemberData => _memberData;
 
     private readonly List<LocalLobbyMember> _members = [];
     private readonly Dictionary<string, string> _metadata = [];
-    private readonly Dictionary<LocalLobbyMember, Dictionary<string, string>> _memberData = [];
+    private readonly Dictionary<Guid, Dictionary<string, string>> _memberData = [];
+
+    public Lobby(Guid lobbyId, LocalLobbyMember owner, int capacity)
+    {
+        Id = lobbyId;
+        Owner = owner;
+
+        AddMember(owner);
+
+        if (capacity <= 0 || capacity > 100)
+        {
+            Console.WriteLine("Cannot set a capacity outside the bounds [1, 100]. Defaulting to 4.");
+            capacity = 4;
+        }
+
+        Capacity = capacity;
+    }
+
+    private string PrintMember(LocalLobbyMember member)
+    {
+        var builder = new StringBuilder();
+
+        foreach (var kvp in _memberData[member.Id])
+        {
+            builder.AppendLine($"{kvp.Key} = {kvp.Value}");
+        }
+
+        return $"{member}{Environment.NewLine}\t{builder}";
+    }
+
+    public override string ToString()
+    {
+        return
+        $"Id: {Id}{Environment.NewLine}" +
+        $"Owner: {Owner}" +
+        $"Capacity: {Members.Count}/{Capacity}" +
+        $"Type: {LobbyType}" +
+        $"Memebers:" +
+        $"{string.Join(Environment.NewLine + "\t", _members.Select(PrintMember))}" +
+        $"Data:" +
+        $"{string.Join(Environment.NewLine + "\t", _metadata.Select(kvp => $"{kvp.Key} = {kvp.Value}"))}";
+    }
 
     public LobbySnapshot GetSnapshot()
     {
@@ -38,21 +76,7 @@ public class Lobby
 
     public List<Guid> GetReceiversExcept(params Guid[] exceptions)
     {
-        return [.. Members.Select(m => m.Id).Where(id => !exceptions.Contains(Id))];
-    }
-
-    public Lobby(Guid lobbyId, LocalLobbyMember ownerId, int capacity)
-    {
-        Id = lobbyId;
-        Owner = ownerId;
-
-        if (capacity <= 0 || capacity > 100)
-        {
-            Console.WriteLine("Cannot set a capacity outside the bounds [1, 100]. Defaulting to 4.");
-            capacity = 4;
-        }
-
-        Capacity = capacity;
+        return [.. Members.Select(m => m.Id).Where(id => !exceptions.Contains(id))];
     }
 
     public void SetCapacity(int capacity)
@@ -75,12 +99,12 @@ public class Lobby
         }
 
         _members.Add(member);
+        _memberData[member.Id] = [];
     }
 
     public void RemoveMember(LocalLobbyMember member)
     {
         _members.Remove(member);
-        OnMemberLeft?.Invoke(member);
 
         if (_members.Count == 0)
         {
@@ -96,7 +120,6 @@ public class Lobby
     {
         _members.Clear();
         Owner = null;
-        OnClosed?.Invoke();
     }
 
     public void SetOwner(LocalLobbyMember newOwner)
@@ -105,6 +128,5 @@ public class Lobby
         if (!_members.Contains(newOwner)) return;
 
         Owner = newOwner;
-        OnNewOwner?.Invoke(newOwner);
     }
 }

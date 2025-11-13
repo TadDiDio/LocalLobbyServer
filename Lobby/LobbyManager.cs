@@ -9,10 +9,10 @@ public class LobbyManager
     public readonly List<LocalLobbyMember> ConnectedMembers = [];
     public readonly Dictionary<LocalLobbyMember, Guid> MemberToLobby = [];
     public readonly Dictionary<Guid, Lobby> Lobbies = [];
-    
-    private LocalLobbyServer _server;
 
-    public LobbyManager(LocalLobbyServer server) => _server = server;
+    private LocalLobbyServer _messager;
+
+    public LobbyManager(LocalLobbyServer server) => _messager = server;
 
     private bool ValidId(string id, out Guid guid)
     {
@@ -36,8 +36,7 @@ public class LobbyManager
 
         if (MemberToLobby.TryGetValue(member, out var lobbyId))
         {
-            Lobbies[lobbyId].RemoveMember(member);
-            MemberToLobby.Remove(member);
+            Remove(lobbyId, member, 0);
         }
     }
 
@@ -45,7 +44,7 @@ public class LobbyManager
     {
         if (MemberToLobby.TryGetValue(sender, out var oldLobbyId))
         {
-            Lobbies[oldLobbyId].RemoveMember(sender);
+            Remove(oldLobbyId, sender, 0);
         }
 
         var lobbyId = Guid.NewGuid();
@@ -62,22 +61,24 @@ public class LobbyManager
         };
     }
 
+    public Lobby JoinLobby(JoinLobbyRequest request, LocalLobbyMember sender)
+    {
+        if (MemberToLobby.TryGetValue(sender, out var oldLobbyId))
+        {
+            Remove(oldLobbyId, sender, 0);
+        }
+
+        if (!ValidId(request.LobbyId, out var id)) return null;
+
+        Add(id, sender);
+
+        return Lobbies[id];
+    }
+
     public void LeaveLobby(LeaveLobbyRequest request, LocalLobbyMember sender)
     {
         if (!ValidId(request.LobbyId, out var lobbyId)) return;
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby)) return;
-
-        lobby.RemoveMember(sender);
-        MemberToLobby.Remove(sender);
-
-        _server.Broadcast(lobby.GetReceiversExcept(sender.Id), Message.CreateEvent(new OtherMemberLeftEvent
-        {
-            Member = sender,
-            LeaveReason = 0,
-            KickReason = -1
-        }));
-
-        Console.WriteLine($"{sender} left lobby {request.LobbyId}");
+        Remove(lobbyId, sender, 0);
     }
 
     public void Invite(InviteMemberRequest request, LocalLobbyMember sender)
@@ -88,12 +89,63 @@ public class LobbyManager
         var invitee = ConnectedMembers.FirstOrDefault(m => m.Id == inviteeId);
         if (invitee == null) return;
 
-        _server.SendMessage(inviteeId, Message.CreateEvent(new ReceivedInviteEvent
+        _messager.SendMessage(inviteeId, Message.CreateEvent(new ReceivedInviteEvent
         {
             Sender = sender,
             LobbyId = lobbyId
         }));
 
         Console.WriteLine($"{sender} invited {invitee} to lobby {lobbyId}");
+    }
+
+    private void Add(Guid lobbyId, LocalLobbyMember member)
+    {
+        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        {
+            Console.WriteLine($"Could not find lobby {lobbyId}");
+            return;
+        }
+
+        lobby.AddMember(member);
+        MemberToLobby[member] = lobbyId;
+
+        _messager.Broadcast(lobby.GetReceiversExcept(member.Id), Message.CreateEvent(new OtherMemberJoinedEvent
+        {
+            Member = member,
+            Metadata = []
+        }));
+
+        Console.WriteLine($"{member} joined lobby {lobbyId}");
+    }
+
+    /// <summary>
+    /// Removes a member and notifies other members.
+    /// </summary>
+    /// <param name="reason">0 = user requested, 1 = kicked</param>
+    /// <param name="kickReason">0 = general, 1 = lobby closed, 2 = owner stopped responding</param>
+    private void Remove(Guid lobbyId, LocalLobbyMember member, int reason, int kickReason = -1)
+    {
+        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        {
+            Console.WriteLine($"Could not find lobby {lobbyId}");
+            return;
+        }
+
+        lobby.RemoveMember(member);
+        MemberToLobby.Remove(member);
+
+        if (lobby.Members.Count == 0)
+        {
+            Lobbies.Remove(lobbyId);
+        }
+
+        _messager.Broadcast(lobby.GetReceiversExcept(), Message.CreateEvent(new OtherMemberLeftEvent
+        {
+            Member = member,
+            LeaveReason = reason,
+            KickReason = kickReason
+        }));
+
+        Console.WriteLine($"{member} left lobby {lobbyId}");
     }
 }
