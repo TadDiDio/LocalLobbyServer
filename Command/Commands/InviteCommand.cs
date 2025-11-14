@@ -1,5 +1,3 @@
-using System;
-
 namespace LobbyService.LocalServer;
 
 public class InviteCommand : BaseCommand<InviteMemberRequest>

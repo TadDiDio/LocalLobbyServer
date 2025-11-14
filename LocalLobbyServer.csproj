@@ -10,7 +10,7 @@
 
   <!-- Reference Unity Shared code -->
   <ItemGroup>
-    <Compile Include="C:\Users\tadad\Documents\Unity Projects\Lobby Service\Assets\com.radtad2.lobbyservice.localserver\Runtime\Shared\**\*.cs" />
+    <Compile Include="..\..\Unity Projects\Lobby Service\Assets\com.radtad2.lobbyservice\Runtime\Local Server\Shared\**\*.cs" />
   </ItemGroup>
 
 

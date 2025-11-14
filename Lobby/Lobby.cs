@@ -19,12 +19,15 @@ public class Lobby
     private readonly Dictionary<string, string> _metadata = [];
     private readonly Dictionary<Guid, Dictionary<string, string>> _memberData = [];
 
-    public Lobby(Guid lobbyId, LocalLobbyMember owner, int capacity)
+    public Lobby(Guid lobbyId, LocalLobbyMember owner, int capacity, string name, LocalLobbyType type)
     {
         Id = lobbyId;
         Owner = owner;
 
         AddMember(owner);
+
+        LobbyType = type;
+        _metadata[LobbyKeys.NameKey] = name;
 
         if (capacity <= 0 || capacity > 100)
         {
@@ -105,28 +108,14 @@ public class Lobby
     public void RemoveMember(LocalLobbyMember member)
     {
         _members.Remove(member);
-
-        if (_members.Count == 0)
-        {
-            Close();
-        }
-        else if (member == Owner)
-        {
-            SetOwner(_members[0]);
-        }
     }
 
-    public void Close()
+    public bool SetOwner(LocalLobbyMember newOwner)
     {
-        _members.Clear();
-        Owner = null;
-    }
-
-    public void SetOwner(LocalLobbyMember newOwner)
-    {
-        if (newOwner == Owner) return;
-        if (!_members.Contains(newOwner)) return;
+        if (newOwner == Owner) return false;
+        if (!_members.Contains(newOwner)) return false;
 
         Owner = newOwner;
+        return true;
     }
 }
