@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks.Dataflow;
 
 namespace LobbyService.LocalServer;
 
 public class LobbyManager
 {
     public readonly List<LocalLobbyMember> ConnectedMembers = [];
-    public readonly Dictionary<LocalLobbyMember, Guid> MemberToLobby = [];
-    public readonly Dictionary<Guid, Lobby> Lobbies = [];
+    private readonly Dictionary<LocalLobbyMember, Guid> _memberToLobby = [];
+    private readonly Dictionary<Guid, Lobby> _lobbies = [];
 
     private LocalLobbyServer _messager;
 
@@ -35,7 +34,7 @@ public class LobbyManager
     {
         ConnectedMembers.Remove(member);
 
-        if (MemberToLobby.TryGetValue(member, out var lobbyId))
+        if (_memberToLobby.TryGetValue(member, out var lobbyId))
         {
             InternalRemove(lobbyId, member, 0);
         }
@@ -43,7 +42,7 @@ public class LobbyManager
 
     public EnterResponse CreateLobby(CreateLobbyRequest request, LocalLobbyMember sender)
     {
-        if (MemberToLobby.TryGetValue(sender, out var oldLobbyId))
+        if (_memberToLobby.TryGetValue(sender, out var oldLobbyId))
         {
             InternalRemove(oldLobbyId, sender, 0);
         }
@@ -51,8 +50,8 @@ public class LobbyManager
         var lobbyId = Guid.NewGuid();
         var lobby = new Lobby(lobbyId, sender, request.Capacity, request.Name, request.LobbyType);
 
-        Lobbies[lobbyId] = lobby;
-        MemberToLobby[sender] = lobbyId;
+        _lobbies[lobbyId] = lobby;
+        _memberToLobby[sender] = lobbyId;
 
         Console.WriteLine($"{sender} created lobby {lobbyId}");
 
@@ -65,10 +64,10 @@ public class LobbyManager
     public Lobby JoinLobby(JoinLobbyRequest request, LocalLobbyMember sender)
     {
         if (!ValidId(request.LobbyId, out var id)) return null;
-        if (!Lobbies.TryGetValue(id, out var lobby)) return null;
+        if (!_lobbies.TryGetValue(id, out var lobby)) return null;
         if (lobby.Members.Count >= lobby.Capacity) return null;
 
-        if (MemberToLobby.TryGetValue(sender, out var oldLobbyId))
+        if (_memberToLobby.TryGetValue(sender, out var oldLobbyId))
         {
             InternalRemove(oldLobbyId, sender, 0);
         }
@@ -76,13 +75,24 @@ public class LobbyManager
 
         InternalAdd(id, sender);
 
-        return Lobbies[id];
+        return _lobbies[id];
     }
 
     public void LeaveLobby(LeaveLobbyRequest request, LocalLobbyMember sender)
     {
         if (!ValidId(request.LobbyId, out var lobbyId)) return;
         InternalRemove(lobbyId, sender, 0);
+    }
+
+    public void CloseLobby(CloseLobbyRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
+
+        for (int i = lobby.Members.Count - 1; i >= 0; i--)
+        {
+            InternalKick(lobbyId, lobby.Members[i].Id, 1);
+        }
     }
 
     public void Invite(InviteMemberRequest request, LocalLobbyMember sender)
@@ -93,7 +103,7 @@ public class LobbyManager
         var invitee = ConnectedMembers.FirstOrDefault(m => m.Id == inviteeId);
         if (invitee == null) return;
 
-        if (Lobbies.TryGetValue(MemberToLobby[invitee], out var receiverLobby))
+        if (_memberToLobby.TryGetValue(invitee, out var memberLobbyId) && _lobbies.TryGetValue(memberLobbyId, out var receiverLobby))
         {
             if (receiverLobby.Id == lobbyId)
             {
@@ -113,12 +123,9 @@ public class LobbyManager
 
     public void Kick(KickMemberRequest request, LocalLobbyMember sender)
     {
-        Console.WriteLine("Here2");
-
         if (!ValidId(request.LobbyId, out var lobbyId)) return;
         if (!ValidId(request.KickeeId, out var kickeeId)) return;
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby)) return;
-        Console.WriteLine("Here3");
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
 
         if (sender != lobby.Owner) return;
         if (kickeeId == lobby.Owner.Id) return; // Disallow owner kicking self
@@ -126,16 +133,44 @@ public class LobbyManager
         InternalKick(lobbyId, kickeeId, 0);
     }
 
+    public void SetLobbyData(LobbyDataRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
+        if (!lobby.Owner.Equals(sender)) return;
+
+        lobby.SetData(request.Key, request.Value);
+        _messager.Broadcast(lobby.GetReceiversExcept(), Message.CreateEvent(new LobbyDataUpdateEvent
+        {
+            Metadata = lobby.Metadata.ToDictionary()
+        }));
+    }
+
+    public void SetMemberData(MemberDataRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
+        if (!lobby.Members.Contains(sender)) return;
+
+        lobby.SetMemberData(sender.Id, request.Key, request.Value);
+        
+        _messager.Broadcast(lobby.GetReceiversExcept(), Message.CreateEvent(new MemberDataUpdateEvent
+        {
+            Member = sender,
+            Metadata = lobby.MemberData[sender.Id].ToDictionary()
+        }));
+    }
+
     private void InternalAdd(Guid lobbyId, LocalLobbyMember member)
     {
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
         {
             Console.WriteLine($"Could not find lobby {lobbyId}");
             return;
         }
 
         lobby.AddMember(member);
-        MemberToLobby[member] = lobbyId;
+        _memberToLobby[member] = lobbyId;
 
         _messager.Broadcast(lobby.GetReceiversExcept(member.Id), Message.CreateEvent(new OtherMemberJoinedEvent
         {
@@ -153,20 +188,20 @@ public class LobbyManager
     /// <param name="kickReason">0 = general, 1 = lobby closed, 2 = owner stopped responding</param>
     private void InternalRemove(Guid lobbyId, LocalLobbyMember member, int reason, int kickReason = -1)
     {
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
         {
             Console.WriteLine($"Could not find lobby {lobbyId}");
             return;
         }
 
         lobby.RemoveMember(member);
-        MemberToLobby.Remove(member);
+        _memberToLobby.Remove(member);
 
         Console.WriteLine($"{member} left lobby {lobbyId}");
 
         if (lobby.Members.Count == 0)
         {
-            Lobbies.Remove(lobbyId);
+            _lobbies.Remove(lobbyId);
             return;
         }
         
@@ -179,7 +214,7 @@ public class LobbyManager
 
         if (lobby.Owner == member)
         {
-            SetOwner(lobbyId, lobby.Members[0]);
+            SetOwner(lobbyId.ToString(), lobby.Members[0].Id.ToString());
         }
     }
 
@@ -192,7 +227,7 @@ public class LobbyManager
     /// <remarks>Broadcast message depends on kick reason.</remarks>
     private void InternalKick(Guid lobbyId, Guid kickeeId, int kickReason)
     {
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
         {
             Console.WriteLine($"Could not find lobby {lobbyId}");
             return;
@@ -207,6 +242,7 @@ public class LobbyManager
         }
 
         lobby.RemoveMember(kickee);
+        _memberToLobby.Remove(kickee);
 
         _messager.SendMessage(kickeeId, Message.CreateEvent(new LocalMemberKickedEvent
         {
@@ -217,7 +253,7 @@ public class LobbyManager
 
         if (lobby.Members.Count == 0)
         {
-            Lobbies.Remove(lobbyId);
+            _lobbies.Remove(lobbyId);
             return;
         }
         
@@ -233,12 +269,22 @@ public class LobbyManager
         }
     }
 
-    public void SetOwner(Guid lobbyId, LocalLobbyMember newOwner)
+    public void SetOwner(string lobbyIdStr, string newOwnerIdStr)
     {
-        if (!Lobbies.TryGetValue(lobbyId, out var lobby))
+        if (!ValidId(lobbyIdStr, out var lobbyId)) return;
+        if (!ValidId(newOwnerIdStr, out var newOwnerId)) return;
+
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
         {
             Console.WriteLine($"Could not find lobby {lobbyId}");
             return;
+        }
+
+        var newOwner = lobby.Members.FirstOrDefault(m => m.Id == newOwnerId);
+
+        if (newOwner == null)
+        {
+            Console.WriteLine($"Could not make {newOwnerId} the owner because they are not in the lobby.");
         }
 
         if (!lobby.SetOwner(newOwner))

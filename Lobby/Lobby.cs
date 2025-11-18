@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Bson;
 
 namespace LobbyService.LocalServer;
 
@@ -108,6 +109,7 @@ public class Lobby
     public void RemoveMember(LocalLobbyMember member)
     {
         _members.Remove(member);
+        _memberData.Remove(member.Id);
     }
 
     public bool SetOwner(LocalLobbyMember newOwner)
@@ -117,5 +119,15 @@ public class Lobby
 
         Owner = newOwner;
         return true;
+    }
+
+    public void SetData(string key, string value)
+    {
+        _metadata[key] = value;
+    }
+
+    public void SetMemberData(Guid memberId, string key, string value)
+    {
+        _memberData[memberId][key] = value;
     }
 }

@@ -11,14 +11,23 @@ public static class CommandRegistry
     {
         _types = new Dictionary<Type, Type>
         {
-            [typeof(ConnectRequest)] = typeof(ConnectCommand),
-            [typeof(CreateLobbyRequest)] = typeof(CreateCommand),
-            [typeof(JoinLobbyRequest)] = typeof(JoinCommand),
-            [typeof(LeaveLobbyRequest)] = typeof(LeaveCommand),
+            // Core
+            [typeof(ConnectRequest)]      = typeof(ConnectCommand),
+            [typeof(CreateLobbyRequest)]  = typeof(CreateCommand),
+            [typeof(JoinLobbyRequest)]    = typeof(JoinCommand),
+            [typeof(LeaveLobbyRequest)]   = typeof(LeaveCommand),
+            [typeof(CloseLobbyRequest)]   = typeof(CloseCommand),
             [typeof(InviteMemberRequest)] = typeof(InviteCommand),
-            [typeof(KickMemberRequest)] = typeof(KickCommand),
+            [typeof(KickMemberRequest)]   = typeof(KickCommand),
+            [typeof(SetOwnerRequest)]     = typeof(SetOwnerCommand),
+            [typeof(LobbyDataRequest)]    = typeof(SetLobbyDataCommand),
+            [typeof(MemberDataRequest)]   = typeof(SetMemberDataCommand),
 
-            [typeof(QueryFriendsRequest)] = typeof(QueryFriendsCommand)
+            // Friends
+            [typeof(QueryFriendsRequest)] = typeof(QueryFriendsCommand),
+
+            // Browsing
+            
         };
     }
 
