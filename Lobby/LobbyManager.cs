@@ -6,14 +6,19 @@ namespace LobbyService.LocalServer;
 
 public class LobbyManager
 {
+    public readonly LobbyBrowser Browser;
+
     public readonly List<LocalLobbyMember> ConnectedMembers = [];
     private readonly Dictionary<LocalLobbyMember, Guid> _memberToLobby = [];
     private readonly Dictionary<Guid, Lobby> _lobbies = [];
 
     private LocalLobbyServer _messager;
 
-    public LobbyManager(LocalLobbyServer server) => _messager = server;
-
+    public LobbyManager(LocalLobbyServer server)
+    {
+        Browser = new LobbyBrowser(this);
+        _messager = server;
+    }
     private bool ValidId(string id, out Guid guid)
     {
         return Guid.TryParse(id, out guid);
@@ -299,5 +304,17 @@ public class LobbyManager
         }));
 
         Console.WriteLine($"{lobby.Owner} was promoted to owner of {lobbyId}");
+    }
+
+    public List<LobbySnapshot> GetAllLobbies()
+    {
+        var result = new List<LobbySnapshot>();
+
+        foreach (var lobby in _lobbies.Values)
+        {
+            result.Add(lobby.GetSnapshot());    
+        }
+
+        return result;
     }
 }

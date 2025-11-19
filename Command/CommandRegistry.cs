@@ -27,7 +27,11 @@ public static class CommandRegistry
             [typeof(QueryFriendsRequest)] = typeof(QueryFriendsCommand),
 
             // Browsing
-            
+            [typeof(BrowseRequest)] = typeof(BrowseCommand),
+            [typeof(ApplyNumberFilterRequest)] = typeof(BrowserNumberFilterCommand),
+            [typeof(ApplyStringFilterRequest)] = typeof(BrowserStringFilterCommand),
+            [typeof(ApplySlotsAvailableFilterRequest)] = typeof(BrowserSlotsAvailableFilterCommand),
+            [typeof(ApplyLimitResponsesFilterRequest)] = typeof(BrowserLimitResponsesFilterCommand),
         };
     }
 
