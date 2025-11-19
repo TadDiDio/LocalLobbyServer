@@ -32,6 +32,10 @@ public static class CommandRegistry
             [typeof(ApplyStringFilterRequest)] = typeof(BrowserStringFilterCommand),
             [typeof(ApplySlotsAvailableFilterRequest)] = typeof(BrowserSlotsAvailableFilterCommand),
             [typeof(ApplyLimitResponsesFilterRequest)] = typeof(BrowserLimitResponsesFilterCommand),
+
+            // Chat
+            [typeof(ChatMessageRequest)] = typeof(ChatMessageCommand),
+            [typeof(DirectMessageRequest)] = typeof(DirectMessageCommand);
         };
     }
 
