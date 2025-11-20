@@ -166,6 +166,37 @@ public class LobbyManager
         }));
     }
 
+    public void SendChat(ChatMessageRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
+        if (!lobby.Members.Contains(sender)) return;
+
+        _messager.Broadcast(lobby.GetReceiversExcept(), Message.CreateEvent(new ChatEvent
+        {
+            Content = request.Message,
+            Sender = sender,
+            Direct = false
+        }));
+    }
+
+    public void SendDirectChat(DirectMessageRequest request, LocalLobbyMember sender)
+    {
+        if (!ValidId(request.LobbyId, out var lobbyId)) return;
+        if (!ValidId(request.TargetId, out var targetId)) return;
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby)) return;
+
+        if (!lobby.Members.Contains(sender)) return;
+        if (!lobby.Members.Any(m => m.Id == targetId)) return;
+
+        _messager.Broadcast([sender.Id, targetId], Message.CreateEvent(new ChatEvent
+        {
+            Content = request.Message,
+            Sender = sender,
+            Direct = true
+        }));
+    }
+
     private void InternalAdd(Guid lobbyId, LocalLobbyMember member)
     {
         if (!_lobbies.TryGetValue(lobbyId, out var lobby))

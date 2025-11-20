@@ -35,7 +35,7 @@ public static class CommandRegistry
 
             // Chat
             [typeof(ChatMessageRequest)] = typeof(ChatMessageCommand),
-            [typeof(DirectMessageRequest)] = typeof(DirectMessageCommand);
+            [typeof(DirectMessageRequest)] = typeof(DirectMessageCommand)
         };
     }
 
