@@ -1,7 +1,7 @@
 # Local Lobby Server
 
 This repository contains the **source code** for the Local Lobby Server used by the Unity package  
-[`com.radtad2.lobbyservice.localserver`](TODO).
+[`com.radtad2.lobbyservice`].
 
 ---
 
@@ -14,7 +14,7 @@ The source is provided for **transparency** and **auditing** purposes only.
 
 If you still wish to build the server manually:
 
-1. Copy the shared runtime code from your Unity project in com.radtad2.lobbyservice.localserver/Runtime/Shared
+1. Copy the shared runtime code from your Unity project in com.radtad2.lobbyservice/Runtime/Local Server/Shared
 
 2. Paste it into this repository under the root.
 
