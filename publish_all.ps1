@@ -51,18 +51,21 @@ Write-Host "All platform binaries built and renamed successfully!"
 # Determine target GitHub release tag
 if ($version -eq "latest") {
     Write-Host "Resolving latest release tag..."
-    $releaseTag = (gh release list --limit 1 | Select-Object -First 1).Split(" ")[0]
+    $releaseTag = (gh release list --limit 1 |
+        Select-Object -First 1).Split(" ")[0]
+
     Write-Host "Uploading assets to latest release ($releaseTag)"
 } else {
     $releaseTag = $version
     Write-Host "Uploading assets to $releaseTag"
 }
 
-# Ensure release exists
+# Check if the release exists by attempting to view it
 Write-Host "Checking if release '$releaseTag' exists..."
-$releaseCheck = gh release view $releaseTag 2>$null
+gh release view $releaseTag 2>$null
+$exists = $LASTEXITCODE -eq 0
 
-if (-not $?) {
+if (-not $exists) {
     Write-Host "Release '$releaseTag' not found. Creating a new release..."
     gh release create $releaseTag --notes "Auto-generated release $releaseTag"
 } else {
@@ -70,6 +73,7 @@ if (-not $?) {
 }
 
 # Upload assets (overwrite if needed)
+Write-Host "Uploading assets..."
 gh release upload $releaseTag publish/win/LocalLobbyServer-win.exe   --clobber
 gh release upload $releaseTag publish/linux/LocalLobbyServer-linux   --clobber
 gh release upload $releaseTag publish/mac/LocalLobbyServer-mac       --clobber

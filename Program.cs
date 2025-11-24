@@ -8,11 +8,19 @@ namespace LobbyService.LocalServer
     {
         public static async Task Main(string[] args)
         {
-            Console.WriteLine($"Starting local lobby server on port {ServerDetails.Port}");
+            int port = 54300;
+            if (args.Length == 1)
+            {
+                if (int.TryParse(args[0], out var declared) && declared > 0 && declared < 65535)
+                {
+                    port = declared;
+                }
+            }
+            Console.WriteLine($"Starting local lobby server on port {port}");
 
             MessageTypeRegistry.RegisterMessageTypes();
 
-            var server = new Server(ServerDetails.Port);
+            var server = new Server(port);
 
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (_, e) =>

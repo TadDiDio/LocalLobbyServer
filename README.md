@@ -8,7 +8,7 @@ This repository contains the **source code** for the Local Lobby Server used by 
 ## 🔧 Building from Source
 
 This server is **not intended to be built directly**.  
-For most users, the recommended way to use it is through the compiled binary automatically downloaded by the Unity package.
+For most users, the recommended way to use it is through the compiled binary which you can downloaded using the Unity package.
 
 The source is provided for **transparency** and **auditing** purposes only.
 
